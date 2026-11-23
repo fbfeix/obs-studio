@@ -6,6 +6,9 @@ extern "C" {
 }
 
 #include <obs-data.h>
+#include <obs.h>
+
+#include <vector>
 
 #include <utility/vertical/VerticalModel.hpp>
 
@@ -92,6 +95,83 @@ static void config_rejects_oversized(void **)
 	obs_data_release(data);
 }
 
+static void resolve_uses_configured_canvas(void **)
+{
+	VerticalConfig cfg;
+	cfg.canvasUuid = "mine";
+	std::vector<CanvasRef> canvases = {{"Aitum Vertical", "aitum"}, {"Vertical", "mine"}};
+
+	CanvasResolution res = ResolveCanvas(cfg, canvases);
+
+	assert_int_equal(static_cast<int>(res.action), static_cast<int>(CanvasAction::UseExisting));
+	assert_string_equal(res.uuid.c_str(), "mine");
+}
+
+static void resolve_adopts_aitum_canvas_without_config(void **)
+{
+	VerticalConfig cfg;
+	std::vector<CanvasRef> canvases = {{"Aitum Vertical", "aitum"}};
+
+	CanvasResolution res = ResolveCanvas(cfg, canvases);
+
+	assert_int_equal(static_cast<int>(res.action), static_cast<int>(CanvasAction::AdoptAitum));
+	assert_string_equal(res.uuid.c_str(), "aitum");
+}
+
+static void resolve_adopts_aitum_when_configured_canvas_is_gone(void **)
+{
+	VerticalConfig cfg;
+	cfg.canvasUuid = "deleted";
+	std::vector<CanvasRef> canvases = {{"Aitum Vertical", "aitum"}};
+
+	CanvasResolution res = ResolveCanvas(cfg, canvases);
+
+	assert_int_equal(static_cast<int>(res.action), static_cast<int>(CanvasAction::AdoptAitum));
+}
+
+static void resolve_creates_when_nothing_matches(void **)
+{
+	VerticalConfig cfg;
+	std::vector<CanvasRef> canvases = {{"Something else", "x"}};
+
+	CanvasResolution res = ResolveCanvas(cfg, canvases);
+
+	assert_int_equal(static_cast<int>(res.action), static_cast<int>(CanvasAction::Create));
+	assert_true(res.uuid.empty());
+}
+
+static void video_info_follows_main_but_uses_vertical_size(void **)
+{
+	obs_video_info main = {};
+	main.fps_num = 60;
+	main.fps_den = 1;
+	main.base_width = 1920;
+	main.base_height = 1080;
+	main.output_width = 1280;
+	main.output_height = 720;
+	main.output_format = VIDEO_FORMAT_NV12;
+	main.colorspace = VIDEO_CS_709;
+	main.range = VIDEO_RANGE_PARTIAL;
+	main.scale_type = OBS_SCALE_BICUBIC;
+
+	VerticalConfig cfg;
+	cfg.width = 1080;
+	cfg.height = 1920;
+
+	obs_video_info v = MakeVideoInfo(main, cfg);
+
+	assert_int_equal(v.base_width, 1080);
+	assert_int_equal(v.base_height, 1920);
+	assert_int_equal(v.output_width, 1080);
+	assert_int_equal(v.output_height, 1920);
+	assert_int_equal(v.fps_num, 60);
+	assert_int_equal(v.fps_den, 1);
+	assert_int_equal(v.output_format, VIDEO_FORMAT_NV12);
+	assert_int_equal(v.colorspace, VIDEO_CS_709);
+	assert_int_equal(v.range, VIDEO_RANGE_PARTIAL);
+	assert_int_equal(v.scale_type, OBS_SCALE_BICUBIC);
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -101,6 +181,11 @@ int main()
 		cmocka_unit_test(config_writes_version),
 		cmocka_unit_test(config_rejects_zero_size),
 		cmocka_unit_test(config_rejects_oversized),
+		cmocka_unit_test(resolve_uses_configured_canvas),
+		cmocka_unit_test(resolve_adopts_aitum_canvas_without_config),
+		cmocka_unit_test(resolve_adopts_aitum_when_configured_canvas_is_gone),
+		cmocka_unit_test(resolve_creates_when_nothing_matches),
+		cmocka_unit_test(video_info_follows_main_but_uses_vertical_size),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);

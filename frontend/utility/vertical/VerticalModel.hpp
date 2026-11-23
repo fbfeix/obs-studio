@@ -1,9 +1,11 @@
 #pragma once
 
 #include <obs-data.h>
+#include <obs.h>
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace OBS::Vertical {
 
@@ -21,5 +23,26 @@ struct VerticalConfig {
 	static VerticalConfig FromData(obs_data_t *data);
 	obs_data_t *ToData() const;
 };
+
+inline constexpr const char *kAitumCanvasName = "Aitum Vertical";
+
+struct CanvasRef {
+	std::string name;
+	std::string uuid;
+};
+
+enum class CanvasAction { UseExisting, AdoptAitum, Create };
+
+struct CanvasResolution {
+	CanvasAction action;
+	std::string uuid;
+};
+
+/* Decides which canvas backs the vertical view after a collection is loaded. */
+CanvasResolution ResolveCanvas(const VerticalConfig &cfg, const std::vector<CanvasRef> &canvases);
+
+/* Video settings for the vertical canvas: timing and color follow the main canvas,
+ * resolution comes from the vertical config (no downscaling). */
+obs_video_info MakeVideoInfo(const obs_video_info &main, const VerticalConfig &cfg);
 
 } // namespace OBS::Vertical

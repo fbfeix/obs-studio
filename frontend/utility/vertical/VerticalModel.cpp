@@ -48,4 +48,33 @@ obs_data_t *VerticalConfig::ToData() const
 	return data;
 }
 
+CanvasResolution ResolveCanvas(const VerticalConfig &cfg, const std::vector<CanvasRef> &canvases)
+{
+	if (!cfg.canvasUuid.empty()) {
+		for (const auto &canvas : canvases) {
+			if (canvas.uuid == cfg.canvasUuid) {
+				return {CanvasAction::UseExisting, canvas.uuid};
+			}
+		}
+	}
+
+	for (const auto &canvas : canvases) {
+		if (canvas.name == kAitumCanvasName) {
+			return {CanvasAction::AdoptAitum, canvas.uuid};
+		}
+	}
+
+	return {CanvasAction::Create, {}};
+}
+
+obs_video_info MakeVideoInfo(const obs_video_info &main, const VerticalConfig &cfg)
+{
+	obs_video_info ovi = main;
+	ovi.base_width = cfg.width;
+	ovi.base_height = cfg.height;
+	ovi.output_width = cfg.width;
+	ovi.output_height = cfg.height;
+	return ovi;
+}
+
 } // namespace OBS::Vertical
