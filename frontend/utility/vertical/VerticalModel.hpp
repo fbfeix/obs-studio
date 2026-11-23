@@ -4,6 +4,9 @@
 #include <obs.h>
 
 #include <cstdint>
+#include <functional>
+#include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -51,5 +54,28 @@ std::string UniqueName(const std::string &base, const std::vector<std::string> &
 /* File path of the vertical recording next to the main recording:
  * "/dir/name.mkv" -> "/dir/name-vertical.mkv". */
 std::string VerticalRecordingPath(const std::string &mainPath);
+
+/* Links main canvas scenes to vertical scenes (by UUID), so switching the main
+ * program scene can switch the vertical canvas too. Several main scenes may
+ * share one vertical scene. */
+class ScenePairs {
+public:
+	void Set(const std::string &mainUuid, const std::string &verticalUuid);
+	void Unset(const std::string &mainUuid);
+	[[nodiscard]] std::optional<std::string> Lookup(const std::string &mainUuid) const;
+
+	/* Drop every pair that references the scene on either side. */
+	void RemoveScene(const std::string &uuid);
+	/* Drop pairs whose scenes no longer exist. */
+	void Prune(const std::function<bool(const std::string &uuid)> &exists);
+
+	[[nodiscard]] size_t Size() const noexcept { return pairs.size(); }
+
+	[[nodiscard]] obs_data_array_t *ToData() const;
+	static ScenePairs FromData(obs_data_array_t *array);
+
+private:
+	std::map<std::string, std::string> pairs;
+};
 
 } // namespace OBS::Vertical

@@ -115,4 +115,75 @@ std::string VerticalRecordingPath(const std::string &mainPath)
 	return mainPath.substr(0, dot) + kSuffix + mainPath.substr(dot);
 }
 
+void ScenePairs::Set(const std::string &mainUuid, const std::string &verticalUuid)
+{
+	if (mainUuid.empty()) {
+		return;
+	}
+	if (verticalUuid.empty()) {
+		Unset(mainUuid);
+		return;
+	}
+	pairs[mainUuid] = verticalUuid;
+}
+
+void ScenePairs::Unset(const std::string &mainUuid)
+{
+	pairs.erase(mainUuid);
+}
+
+std::optional<std::string> ScenePairs::Lookup(const std::string &mainUuid) const
+{
+	auto it = pairs.find(mainUuid);
+	if (it == pairs.end()) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void ScenePairs::RemoveScene(const std::string &uuid)
+{
+	Prune([&uuid](const std::string &candidate) { return candidate != uuid; });
+}
+
+void ScenePairs::Prune(const std::function<bool(const std::string &)> &exists)
+{
+	for (auto it = pairs.begin(); it != pairs.end();) {
+		if (!exists(it->first) || !exists(it->second)) {
+			it = pairs.erase(it);
+		} else {
+			++it;
+		}
+	}
+}
+
+obs_data_array_t *ScenePairs::ToData() const
+{
+	obs_data_array_t *array = obs_data_array_create();
+	for (const auto &[mainUuid, verticalUuid] : pairs) {
+		obs_data_t *entry = obs_data_create();
+		obs_data_set_string(entry, "main", mainUuid.c_str());
+		obs_data_set_string(entry, "vertical", verticalUuid.c_str());
+		obs_data_array_push_back(array, entry);
+		obs_data_release(entry);
+	}
+	return array;
+}
+
+ScenePairs ScenePairs::FromData(obs_data_array_t *array)
+{
+	ScenePairs result;
+	if (!array) {
+		return result;
+	}
+
+	size_t count = obs_data_array_count(array);
+	for (size_t i = 0; i < count; i++) {
+		obs_data_t *entry = obs_data_array_item(array, i);
+		result.Set(obs_data_get_string(entry, "main"), obs_data_get_string(entry, "vertical"));
+		obs_data_release(entry);
+	}
+	return result;
+}
+
 } // namespace OBS::Vertical

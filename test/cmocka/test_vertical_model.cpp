@@ -215,6 +215,121 @@ static void vertical_path_empty_stays_empty(void **)
 	assert_true(VerticalRecordingPath("").empty());
 }
 
+static void pairs_lookup_returns_vertical_scene(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+
+	auto found = pairs.Lookup("main-a");
+
+	assert_true(found.has_value());
+	assert_string_equal(found->c_str(), "vert-1");
+	assert_false(pairs.Lookup("main-b").has_value());
+}
+
+static void pairs_set_replaces_existing(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Set("main-a", "vert-2");
+
+	assert_string_equal(pairs.Lookup("main-a")->c_str(), "vert-2");
+	assert_int_equal(pairs.Size(), 1);
+}
+
+static void pairs_allow_many_main_scenes_per_vertical(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Set("main-b", "vert-1");
+
+	assert_string_equal(pairs.Lookup("main-b")->c_str(), "vert-1");
+	assert_int_equal(pairs.Size(), 2);
+}
+
+static void pairs_unset_removes_pair(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Unset("main-a");
+
+	assert_false(pairs.Lookup("main-a").has_value());
+}
+
+static void pairs_empty_uuid_unsets(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Set("main-a", "");
+
+	assert_false(pairs.Lookup("main-a").has_value());
+}
+
+static void pairs_remove_scene_drops_both_sides(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Set("main-b", "vert-2");
+	pairs.Set("main-c", "vert-1");
+
+	pairs.RemoveScene("vert-1");
+	pairs.RemoveScene("main-b");
+
+	assert_int_equal(pairs.Size(), 0);
+}
+
+static void pairs_prune_drops_missing_scenes(void **)
+{
+	ScenePairs pairs;
+	pairs.Set("main-a", "vert-1");
+	pairs.Set("main-gone", "vert-1");
+	pairs.Set("main-b", "vert-gone");
+
+	pairs.Prune([](const std::string &uuid) { return uuid.find("gone") == std::string::npos; });
+
+	assert_int_equal(pairs.Size(), 1);
+	assert_true(pairs.Lookup("main-a").has_value());
+}
+
+static void pairs_round_trip(void **)
+{
+	ScenePairs in;
+	in.Set("main-a", "vert-1");
+	in.Set("main-b", "vert-2");
+
+	obs_data_array_t *array = in.ToData();
+	ScenePairs out = ScenePairs::FromData(array);
+	obs_data_array_release(array);
+
+	assert_int_equal(out.Size(), 2);
+	assert_string_equal(out.Lookup("main-a")->c_str(), "vert-1");
+	assert_string_equal(out.Lookup("main-b")->c_str(), "vert-2");
+}
+
+static void pairs_from_null_is_empty(void **)
+{
+	assert_int_equal(ScenePairs::FromData(nullptr).Size(), 0);
+}
+
+static void pairs_from_data_skips_incomplete_entries(void **)
+{
+	obs_data_array_t *array = obs_data_array_create();
+	obs_data_t *complete = obs_data_create();
+	obs_data_set_string(complete, "main", "main-a");
+	obs_data_set_string(complete, "vertical", "vert-1");
+	obs_data_t *incomplete = obs_data_create();
+	obs_data_set_string(incomplete, "main", "main-b");
+	obs_data_array_push_back(array, complete);
+	obs_data_array_push_back(array, incomplete);
+	obs_data_release(complete);
+	obs_data_release(incomplete);
+
+	ScenePairs pairs = ScenePairs::FromData(array);
+	obs_data_array_release(array);
+
+	assert_int_equal(pairs.Size(), 1);
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -236,6 +351,16 @@ int main()
 		cmocka_unit_test(vertical_path_ignores_dots_in_directories),
 		cmocka_unit_test(vertical_path_keeps_hidden_file_name),
 		cmocka_unit_test(vertical_path_empty_stays_empty),
+		cmocka_unit_test(pairs_lookup_returns_vertical_scene),
+		cmocka_unit_test(pairs_set_replaces_existing),
+		cmocka_unit_test(pairs_allow_many_main_scenes_per_vertical),
+		cmocka_unit_test(pairs_unset_removes_pair),
+		cmocka_unit_test(pairs_empty_uuid_unsets),
+		cmocka_unit_test(pairs_remove_scene_drops_both_sides),
+		cmocka_unit_test(pairs_prune_drops_missing_scenes),
+		cmocka_unit_test(pairs_round_trip),
+		cmocka_unit_test(pairs_from_null_is_empty),
+		cmocka_unit_test(pairs_from_data_skips_incomplete_entries),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);
