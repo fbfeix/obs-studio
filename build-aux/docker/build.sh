@@ -30,7 +30,9 @@ docker run --rm \
       -DENABLE_VST3=OFF \
       -DENABLE_AJA=OFF \
       -DENABLE_WEBRTC=OFF \
+      -DENABLE_TESTS=ON \
       "$@"
     cmake --build build_docker -j"$(nproc)"
     cmake --install build_docker
+    ctest --test-dir build_docker --output-on-failure
   ' _ "$@"

@@ -34,4 +34,10 @@ add_subdirectory(test/test-input)
 
 add_subdirectory(frontend)
 
+option(ENABLE_TESTS "Build unit tests" OFF)
+if(ENABLE_TESTS)
+  enable_testing()
+  add_subdirectory(test/cmocka)
+endif()
+
 message_configuration()
