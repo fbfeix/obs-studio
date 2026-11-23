@@ -2,6 +2,8 @@
 # Start the Docker-built OBS Studio GUI on the host's X11 display.
 # Requires a prior build-aux/docker/build.sh run.
 # Settings persist in build_docker/config (separate from a system OBS install).
+# The host home directory is mounted at the same path so scene files and
+# recording paths from the user's profiles work unchanged.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -31,5 +33,6 @@ docker run --rm "${GPU_ARGS[@]}" \
   --device /dev/dri \
   --ipc=host \
   -v "$ROOT:/src" \
+  -v "$HOME:$HOME" \
   -w /src/build_docker/install/bin \
   "$IMAGE" ./obs "$@"
