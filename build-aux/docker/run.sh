@@ -26,6 +26,8 @@ docker run --rm "${GPU_ARGS[@]}" \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v /etc/machine-id:/etc/machine-id:ro \
   -v "${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse" \
+  -e PIPEWIRE_RUNTIME_DIR="${XDG_RUNTIME_DIR}" \
+  -v "${XDG_RUNTIME_DIR}/pipewire-0:${XDG_RUNTIME_DIR}/pipewire-0" \
   --device /dev/dri \
   --ipc=host \
   -v "$ROOT:/src" \

@@ -12,7 +12,7 @@ if ! git -C "$ROOT" describe --tags >/dev/null 2>&1; then
   git -C "$ROOT" fetch --no-recurse-submodules https://github.com/obsproject/obs-studio.git 'refs/tags/*:refs/tags/*'
 fi
 
-git -C "$ROOT" submodule update --init plugins/obs-browser plugins/obs-websocket
+git -C "$ROOT" submodule update --init plugins/obs-browser plugins/obs-websocket plugins/third-party
 
 docker build --network=host -t "$IMAGE" "$ROOT/build-aux/docker"
 
@@ -35,4 +35,5 @@ docker run --rm \
     cmake --build build_docker -j"$(nproc)"
     cmake --install build_docker
     ctest --test-dir build_docker --output-on-failure
+    build-aux/docker/build-plugins.sh /src/build_docker/install
   ' _ "$@"

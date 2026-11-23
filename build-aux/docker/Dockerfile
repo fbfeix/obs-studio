@@ -23,6 +23,15 @@ RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4 \
   libffmpeg-nvenc-dev librist-dev libsrt-openssl-dev \
   qt6-base-dev libqt6svg6-dev qt6-base-private-dev \
   libvpl-dev libvpl2 \
+  # third-party plugins (plugins/third-party)
+  libturbojpeg0-dev libusbmuxd-dev libimobiledevice-dev \
+  libonnxruntime-dev libopencv-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# PipeWire client configuration, needed to connect to the host's PipeWire
+# daemon (audio capture plugin) through the forwarded socket.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  pipewire-bin \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
