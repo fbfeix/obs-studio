@@ -28,3 +28,10 @@ target_include_directories(test_os_path PRIVATE ${CMOCKA_INCLUDE_DIR})
 target_link_libraries(test_os_path PRIVATE OBS::libobs ${CMOCKA_LIBRARIES})
 
 add_test(test_os_path ${CMAKE_CURRENT_BINARY_DIR}/test_os_path)
+
+# Vertical canvas model test
+add_executable(test_vertical_model test_vertical_model.cpp)
+target_include_directories(test_vertical_model PRIVATE ${CMOCKA_INCLUDE_DIR})
+target_link_libraries(test_vertical_model PRIVATE OBS::frontend-vertical-core ${CMOCKA_LIBRARIES})
+
+add_test(test_vertical_model ${CMAKE_CURRENT_BINARY_DIR}/test_vertical_model)
