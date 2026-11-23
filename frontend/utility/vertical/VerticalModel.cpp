@@ -1,5 +1,7 @@
 #include "VerticalModel.hpp"
 
+#include <algorithm>
+
 namespace OBS::Vertical {
 
 namespace {
@@ -75,6 +77,24 @@ obs_video_info MakeVideoInfo(const obs_video_info &main, const VerticalConfig &c
 	ovi.output_width = cfg.width;
 	ovi.output_height = cfg.height;
 	return ovi;
+}
+
+std::string UniqueName(const std::string &base, const std::vector<std::string> &taken)
+{
+	auto isTaken = [&taken](const std::string &name) {
+		return std::find(taken.begin(), taken.end(), name) != taken.end();
+	};
+
+	if (!isTaken(base)) {
+		return base;
+	}
+
+	for (int i = 2;; i++) {
+		std::string candidate = base + " " + std::to_string(i);
+		if (!isTaken(candidate)) {
+			return candidate;
+		}
+	}
 }
 
 } // namespace OBS::Vertical

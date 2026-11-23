@@ -172,6 +172,27 @@ static void video_info_follows_main_but_uses_vertical_size(void **)
 	assert_int_equal(v.scale_type, OBS_SCALE_BICUBIC);
 }
 
+static void unique_name_returns_base_when_free(void **)
+{
+	std::vector<std::string> taken = {"Scene", "Other"};
+
+	assert_string_equal(UniqueName("Vertical Scene", taken).c_str(), "Vertical Scene");
+}
+
+static void unique_name_appends_counter(void **)
+{
+	std::vector<std::string> taken = {"Vertical Scene", "Vertical Scene 2"};
+
+	assert_string_equal(UniqueName("Vertical Scene", taken).c_str(), "Vertical Scene 3");
+}
+
+static void unique_name_fills_first_gap(void **)
+{
+	std::vector<std::string> taken = {"Vertical Scene", "Vertical Scene 3"};
+
+	assert_string_equal(UniqueName("Vertical Scene", taken).c_str(), "Vertical Scene 2");
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -186,6 +207,9 @@ int main()
 		cmocka_unit_test(resolve_adopts_aitum_when_configured_canvas_is_gone),
 		cmocka_unit_test(resolve_creates_when_nothing_matches),
 		cmocka_unit_test(video_info_follows_main_but_uses_vertical_size),
+		cmocka_unit_test(unique_name_returns_base_when_free),
+		cmocka_unit_test(unique_name_appends_counter),
+		cmocka_unit_test(unique_name_fills_first_gap),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);

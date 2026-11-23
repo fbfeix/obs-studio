@@ -45,4 +45,7 @@ CanvasResolution ResolveCanvas(const VerticalConfig &cfg, const std::vector<Canv
  * resolution comes from the vertical config (no downscaling). */
 obs_video_info MakeVideoInfo(const obs_video_info &main, const VerticalConfig &cfg);
 
+/* Returns base, or "base N" with the smallest N >= 2 that is not taken. */
+std::string UniqueName(const std::string &base, const std::vector<std::string> &taken);
+
 } // namespace OBS::Vertical
