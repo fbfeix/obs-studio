@@ -8,7 +8,13 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 IMAGE="obs-studio-build:ubuntu26.04"
 mkdir -p "$ROOT/build_docker/config/.config/obs-studio"
 
-docker run --rm \
+# Use the NVIDIA GPU (OpenGL + NVENC) when nvidia-container-toolkit is set up.
+GPU_ARGS=()
+if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"nvidia"'; then
+  GPU_ARGS=(--runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=all)
+fi
+
+docker run --rm "${GPU_ARGS[@]}" \
   --user "$(id -u):$(id -g)" \
   --group-add video --group-add "$(getent group render | cut -d: -f3 || echo video)" \
   -e HOME=/src/build_docker/config \
@@ -18,6 +24,7 @@ docker run --rm \
   -e PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native" \
   -e LD_LIBRARY_PATH=/src/build_docker/install/lib \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v /etc/machine-id:/etc/machine-id:ro \
   -v "${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse" \
   --device /dev/dri \
   --ipc=host \
