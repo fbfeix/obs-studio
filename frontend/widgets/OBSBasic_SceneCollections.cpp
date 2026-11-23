@@ -901,6 +901,9 @@ void OBSBasic::Save(SceneCollection &collection)
 	OBSDataArrayAutoRelease savedCanvases = OBS::Canvas::SaveCanvases(canvases);
 	obs_data_set_array(saveData, "canvases", savedCanvases);
 
+	OBSDataAutoRelease verticalData = verticalCanvas.Save();
+	obs_data_set_obj(saveData, "vertical", verticalData);
+
 	// Transitions
 	OBSSourceAutoRelease transition = obs_get_output_source(0);
 	OBSDataArrayAutoRelease transitionsData = SaveTransitions();
@@ -1267,6 +1270,10 @@ void OBSBasic::LoadData(obs_data_t *data, SceneCollection &collection)
 		canvases = OBS::Canvas::LoadCanvases(collection_canvases);
 	}
 
+	verticalCanvas.LoadCanvas(data, canvases,
+				  [this](const std::string &canvasName, obs_video_info *canvasOvi, int flags)
+					  -> obs_canvas_t * { return AddCanvas(canvasName, canvasOvi, flags); });
+
 	if (!sources) {
 		sources = std::move(groups);
 	} else {
@@ -1350,6 +1357,7 @@ void OBSBasic::LoadData(obs_data_t *data, SceneCollection &collection)
 	if (resetVideo) {
 		ResetVideo();
 	}
+	verticalCanvas.FinishLoad();
 	if (transitionsData) {
 		LoadTransitions(transitionsData, addMissingFiles, files);
 	}
@@ -1596,6 +1604,8 @@ void OBSBasic::ClearSceneData()
 	clipboard.clear();
 	copyFiltersSource_ = nullptr;
 	copyFilter = nullptr;
+
+	verticalCanvas.Clear();
 
 	auto cb = [](void *, obs_source_t *source) {
 		obs_source_remove(source);

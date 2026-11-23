@@ -27,6 +27,7 @@
 #include <utility/OBSCanvas.hpp>
 #include <utility/PreviewProgramSizeObserver.hpp>
 #include <utility/VCamConfig.hpp>
+#include <utility/vertical/VerticalCanvas.hpp>
 #include <utility/platform.hpp>
 #include <utility/undo_stack.hpp>
 
@@ -1150,6 +1151,7 @@ public:
 	 */
 private:
 	std::vector<OBS::Canvas> canvases;
+	OBS::Vertical::VerticalCanvas verticalCanvas;
 
 	static void CanvasRemoved(void *data, calldata_t *params);
 	void ClearCanvases();
@@ -1158,6 +1160,8 @@ public:
 	const std::vector<OBS::Canvas> &GetCanvases() const noexcept { return canvases; }
 
 	const OBS::Canvas &AddCanvas(const std::string &name, obs_video_info *ovi = nullptr, int flags = 0);
+
+	OBS::Vertical::VerticalCanvas &GetVerticalCanvas() noexcept { return verticalCanvas; }
 
 public slots:
 	bool RemoveCanvas(OBSCanvas canvas);

@@ -16,3 +16,4 @@ target_link_libraries(obs-frontend-vertical-core PUBLIC OBS::libobs)
 set_target_properties(obs-frontend-vertical-core PROPERTIES FOLDER frontend POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(obs-studio PRIVATE OBS::frontend-vertical-core)
+target_sources(obs-studio PRIVATE utility/vertical/VerticalCanvas.cpp utility/vertical/VerticalCanvas.hpp)
