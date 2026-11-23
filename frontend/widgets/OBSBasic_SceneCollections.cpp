@@ -1605,6 +1605,9 @@ void OBSBasic::ClearSceneData()
 	copyFiltersSource_ = nullptr;
 	copyFilter = nullptr;
 
+	/* The vertical recording encodes the vertical canvas' video mix, which is
+	 * destroyed with the canvas below; stop it first or its output never ends. */
+	verticalRecording.Reset();
 	verticalCanvas.Clear();
 
 	auto cb = [](void *, obs_source_t *source) {

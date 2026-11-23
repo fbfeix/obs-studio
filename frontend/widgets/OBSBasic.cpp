@@ -252,7 +252,12 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	verticalDock->setObjectName(QStringLiteral("verticalCanvasDock"));
 	verticalDock->setWindowTitle(QTStr("Basic.Vertical.Title"));
 	verticalDock->setWidget(new VerticalCanvasDock(verticalCanvas, verticalDock));
-	AddDockWidget(verticalDock, Qt::RightDockWidgetArea);
+	verticalDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
+				  QDockWidget::DockWidgetFloatable);
+	/* Not registered via AddDockWidget(): that takes ownership, but the dock
+	 * must be destroyed explicitly before libobs shuts down. */
+	addDockWidget(Qt::RightDockWidgetArea, verticalDock);
+	ui->menuDocks->addAction(verticalDock->toggleViewAction());
 
 	startingDockLayout = saveState();
 
@@ -1326,6 +1331,7 @@ void OBSBasic::applicationShutdown() noexcept
 	ClearHotkeys();
 
 	service = nullptr;
+	verticalRecording.Reset();
 	outputHandler.reset();
 
 	delete interaction;

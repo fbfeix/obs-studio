@@ -97,4 +97,22 @@ std::string UniqueName(const std::string &base, const std::vector<std::string> &
 	}
 }
 
+std::string VerticalRecordingPath(const std::string &mainPath)
+{
+	if (mainPath.empty()) {
+		return {};
+	}
+
+	constexpr const char *kSuffix = "-vertical";
+	size_t nameStart = mainPath.find_last_of("/\\");
+	nameStart = nameStart == std::string::npos ? 0 : nameStart + 1;
+
+	size_t dot = mainPath.find_last_of('.');
+	bool hasExtension = dot != std::string::npos && dot > nameStart;
+	if (!hasExtension) {
+		return mainPath + kSuffix;
+	}
+	return mainPath.substr(0, dot) + kSuffix + mainPath.substr(dot);
+}
+
 } // namespace OBS::Vertical

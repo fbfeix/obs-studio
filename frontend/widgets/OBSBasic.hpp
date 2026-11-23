@@ -28,6 +28,7 @@
 #include <utility/PreviewProgramSizeObserver.hpp>
 #include <utility/VCamConfig.hpp>
 #include <utility/vertical/VerticalCanvas.hpp>
+#include <utility/vertical/VerticalRecording.hpp>
 #include <utility/platform.hpp>
 #include <utility/undo_stack.hpp>
 
@@ -1023,6 +1024,7 @@ public slots:
 	void StopRecording();
 
 	void RecordingStart();
+	void StartVerticalRecording();
 	void RecordStopping();
 	void RecordingStop(int code, QString last_error);
 	void RecordingFileChanged(QString lastRecordingPath);
@@ -1152,6 +1154,7 @@ public:
 private:
 	std::vector<OBS::Canvas> canvases;
 	OBS::Vertical::VerticalCanvas verticalCanvas;
+	OBS::Vertical::VerticalRecording verticalRecording;
 	QPointer<OBSDock> verticalDock;
 
 	static void CanvasRemoved(void *data, calldata_t *params);

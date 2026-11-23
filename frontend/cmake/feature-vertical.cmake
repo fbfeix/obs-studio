@@ -23,4 +23,6 @@ target_sources(
     docks/VerticalCanvasDock.hpp
     utility/vertical/VerticalCanvas.cpp
     utility/vertical/VerticalCanvas.hpp
+    utility/vertical/VerticalRecording.cpp
+    utility/vertical/VerticalRecording.hpp
 )

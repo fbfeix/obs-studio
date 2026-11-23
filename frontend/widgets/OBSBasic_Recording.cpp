@@ -155,6 +155,7 @@ void OBSBasic::StopRecording()
 	if (outputHandler->RecordingActive()) {
 		outputHandler->StopRecording(recordingStopping);
 	}
+	verticalRecording.Stop(recordingStopping);
 
 	OnDeactivate();
 }
@@ -178,10 +179,29 @@ void OBSBasic::RecordingStart()
 	OnActivate();
 
 	blog(LOG_INFO, RECORDING_START);
+
+	StartVerticalRecording();
+}
+
+void OBSBasic::StartVerticalRecording()
+{
+	if (!verticalCanvas.Config().record) {
+		return;
+	}
+
+	OBSCanvas canvas = verticalCanvas.GetCanvas();
+	if (!verticalRecording.Start(outputHandler->fileOutput, canvas)) {
+		ui->statusbar->showMessage(QTStr("Basic.Vertical.RecordFailed"), 10000);
+		return;
+	}
+	if (os_atomic_load_bool(&recording_paused)) {
+		verticalRecording.SetPaused(true);
+	}
 }
 
 void OBSBasic::RecordingStop(int code, QString last_error)
 {
+	verticalRecording.Stop(code != OBS_OUTPUT_SUCCESS);
 	ui->statusbar->RecordingStopped();
 	emit RecordingStopped();
 
@@ -297,6 +317,7 @@ void OBSBasic::PauseRecording()
 
 	if (obs_output_pause(output, true)) {
 		os_atomic_set_bool(&recording_paused, true);
+		verticalRecording.SetPaused(true);
 
 		emit RecordingPaused();
 
@@ -332,6 +353,7 @@ void OBSBasic::UnpauseRecording()
 
 	if (obs_output_pause(output, false)) {
 		os_atomic_set_bool(&recording_paused, false);
+		verticalRecording.SetPaused(false);
 
 		emit RecordingUnpaused();
 

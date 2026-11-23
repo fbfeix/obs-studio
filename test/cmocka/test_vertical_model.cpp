@@ -193,6 +193,28 @@ static void unique_name_fills_first_gap(void **)
 	assert_string_equal(UniqueName("Vertical Scene", taken).c_str(), "Vertical Scene 2");
 }
 
+static void vertical_path_inserts_suffix_before_extension(void **)
+{
+	assert_string_equal(VerticalRecordingPath("/home/felix/2026-11-23 13-00-00.mkv").c_str(),
+			    "/home/felix/2026-11-23 13-00-00-vertical.mkv");
+}
+
+static void vertical_path_ignores_dots_in_directories(void **)
+{
+	assert_string_equal(VerticalRecordingPath("/home/felix/my.videos/recording").c_str(),
+			    "/home/felix/my.videos/recording-vertical");
+}
+
+static void vertical_path_keeps_hidden_file_name(void **)
+{
+	assert_string_equal(VerticalRecordingPath("/tmp/.hidden").c_str(), "/tmp/.hidden-vertical");
+}
+
+static void vertical_path_empty_stays_empty(void **)
+{
+	assert_true(VerticalRecordingPath("").empty());
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -210,6 +232,10 @@ int main()
 		cmocka_unit_test(unique_name_returns_base_when_free),
 		cmocka_unit_test(unique_name_appends_counter),
 		cmocka_unit_test(unique_name_fills_first_gap),
+		cmocka_unit_test(vertical_path_inserts_suffix_before_extension),
+		cmocka_unit_test(vertical_path_ignores_dots_in_directories),
+		cmocka_unit_test(vertical_path_keeps_hidden_file_name),
+		cmocka_unit_test(vertical_path_empty_stays_empty),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);
