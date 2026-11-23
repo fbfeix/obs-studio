@@ -17,6 +17,7 @@ namespace OBS::Vertical {
 class VerticalCanvas {
 public:
 	using AddCanvasFn = std::function<obs_canvas_t *(const std::string &name, obs_video_info *ovi, int flags)>;
+	using ChangedFn = std::function<void()>;
 
 	static constexpr const char *kCanvasName = "Vertical";
 	static constexpr const char *kDefaultSceneName = "Vertical Scene";
@@ -41,9 +42,20 @@ public:
 	[[nodiscard]] OBSSource GetCurrentScene() const;
 	void SetCurrentScene(obs_source_t *scene);
 
+	[[nodiscard]] std::vector<OBSSource> GetScenes() const;
+	OBSSource CreateScene(const std::string &baseName);
+	void RemoveScene(obs_source_t *scene);
+
+	/* Notified (on the UI thread) whenever the canvas, its scene list or the
+	 * current scene changes. */
+	void SetChangedCallback(ChangedFn callback) { changed = std::move(callback); }
+
 	[[nodiscard]] const VerticalConfig &Config() const noexcept { return config; }
 
 private:
+	void NotifyChanged() const;
+
+	ChangedFn changed;
 	VerticalConfig config;
 	OBSWeakCanvas canvas;
 	OBSWeakSource currentScene;

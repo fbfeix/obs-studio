@@ -27,6 +27,8 @@
 
 #include <obs-module.h>
 
+#include <docks/VerticalCanvasDock.hpp>
+
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
 #endif
@@ -245,6 +247,12 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	int sideDockWidth = std::min(width() * 30 / 100, 320);
 	resizeDocks({ui->scenesDock, ui->sourcesDock}, {sideDockWidth, sideDockWidth}, Qt::Horizontal);
 	addDockWidget(Qt::BottomDockWidgetArea, controlsDock);
+
+	verticalDock = new OBSDock(this);
+	verticalDock->setObjectName(QStringLiteral("verticalCanvasDock"));
+	verticalDock->setWindowTitle(QTStr("Basic.Vertical.Title"));
+	verticalDock->setWidget(new VerticalCanvasDock(verticalCanvas, verticalDock));
+	AddDockWidget(verticalDock, Qt::RightDockWidgetArea);
 
 	startingDockLayout = saveState();
 
@@ -1327,6 +1335,10 @@ void OBSBasic::applicationShutdown() noexcept
 	delete advAudioWindow;
 	delete about;
 	delete remux;
+
+	/* The vertical dock references verticalCanvas and holds libobs signal
+	 * connections, so it must go before OBSBasic members and libobs. */
+	delete verticalDock;
 
 	obs_display_remove_draw_callback(ui->preview->GetDisplay(), OBSBasic::RenderMain, this);
 

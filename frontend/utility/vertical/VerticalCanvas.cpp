@@ -108,6 +108,67 @@ void VerticalCanvas::FinishLoad()
 	SetCurrentScene(scene);
 }
 
+std::vector<OBSSource> VerticalCanvas::GetScenes() const
+{
+	std::vector<OBSSource> scenes;
+	OBSCanvas target = GetCanvas();
+	if (!target) {
+		return scenes;
+	}
+
+	auto cb = [](void *param, obs_source_t *source) {
+		static_cast<std::vector<OBSSource> *>(param)->emplace_back(source);
+		return true;
+	};
+	obs_canvas_enum_scenes(target, cb, &scenes);
+	return scenes;
+}
+
+OBSSource VerticalCanvas::CreateScene(const std::string &baseName)
+{
+	OBSCanvas target = GetCanvas();
+	if (!target) {
+		return nullptr;
+	}
+
+	std::vector<std::string> taken;
+	for (const auto &scene : GetScenes()) {
+		taken.emplace_back(obs_source_get_name(scene));
+	}
+
+	OBSSceneAutoRelease created = obs_canvas_scene_create(target, UniqueName(baseName, taken).c_str());
+	OBSSource source = obs_scene_get_source(created);
+	SetCurrentScene(source);
+	return source;
+}
+
+void VerticalCanvas::RemoveScene(obs_source_t *scene)
+{
+	std::vector<OBSSource> scenes = GetScenes();
+	if (!scene || scenes.size() <= 1) {
+		return;
+	}
+
+	if (GetCurrentScene().Get() == scene) {
+		for (const auto &other : scenes) {
+			if (other.Get() != scene) {
+				SetCurrentScene(other);
+				break;
+			}
+		}
+	}
+
+	obs_source_remove(scene);
+	NotifyChanged();
+}
+
+void VerticalCanvas::NotifyChanged() const
+{
+	if (changed) {
+		changed();
+	}
+}
+
 void VerticalCanvas::ApplyVideo()
 {
 	OBSCanvas target = GetCanvas();
@@ -126,6 +187,7 @@ void VerticalCanvas::Clear()
 	canvas = nullptr;
 	pendingSceneUuid.clear();
 	config = VerticalConfig{};
+	NotifyChanged();
 }
 
 OBSDataAutoRelease VerticalCanvas::Save() const
@@ -155,6 +217,7 @@ void VerticalCanvas::SetCurrentScene(obs_source_t *scene)
 
 	currentScene = OBSGetWeakRef(scene);
 	obs_canvas_set_channel(target, 0, scene);
+	NotifyChanged();
 }
 
 } // namespace OBS::Vertical

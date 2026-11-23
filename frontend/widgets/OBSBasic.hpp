@@ -1152,6 +1152,7 @@ public:
 private:
 	std::vector<OBS::Canvas> canvases;
 	OBS::Vertical::VerticalCanvas verticalCanvas;
+	QPointer<OBSDock> verticalDock;
 
 	static void CanvasRemoved(void *data, calldata_t *params);
 	void ClearCanvases();
