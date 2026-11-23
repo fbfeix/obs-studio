@@ -7,6 +7,13 @@ namespace OBS::Vertical {
 namespace {
 constexpr const char *kCollectionKey = "vertical";
 constexpr const char *kCurrentSceneKey = "current_scene_uuid";
+constexpr const char *kPairsKey = "pairs";
+
+bool SourceExists(const std::string &uuid)
+{
+	OBSSourceAutoRelease source = obs_get_source_by_uuid(uuid.c_str());
+	return source != nullptr;
+}
 
 bool ResetCanvasVideo(obs_canvas_t *canvas, const VerticalConfig &cfg)
 {
@@ -42,6 +49,8 @@ void VerticalCanvas::LoadCanvas(obs_data_t *collection, const std::vector<OBS::C
 	OBSDataAutoRelease data = obs_data_get_obj(collection, kCollectionKey);
 	config = VerticalConfig::FromData(data);
 	pendingSceneUuid = data ? obs_data_get_string(data, kCurrentSceneKey) : "";
+	OBSDataArrayAutoRelease pairData = data ? obs_data_get_array(data, kPairsKey) : nullptr;
+	pairs = ScenePairs::FromData(pairData);
 
 	std::vector<CanvasRef> refs;
 	refs.reserve(canvases.size());
@@ -158,6 +167,7 @@ void VerticalCanvas::RemoveScene(obs_source_t *scene)
 		}
 	}
 
+	pairs.RemoveScene(obs_source_get_uuid(scene));
 	obs_source_remove(scene);
 	NotifyChanged();
 }
@@ -167,6 +177,60 @@ void VerticalCanvas::NotifyChanged() const
 	if (changed) {
 		changed();
 	}
+}
+
+void VerticalCanvas::OnMainSceneChanged(obs_source_t *scene)
+{
+	mainScene = scene ? OBSGetWeakRef(scene) : OBSWeakSource();
+
+	OBSSource paired = GetPairedScene(scene);
+	if (paired && paired.Get() != GetCurrentScene().Get()) {
+		SetCurrentScene(paired);
+		return;
+	}
+	NotifyChanged();
+}
+
+OBSSource VerticalCanvas::GetMainScene() const
+{
+	return OBSGetStrongRef(mainScene);
+}
+
+OBSSource VerticalCanvas::GetPairedScene(obs_source_t *scene) const
+{
+	OBSCanvas target = GetCanvas();
+	if (!scene || !target) {
+		return nullptr;
+	}
+
+	std::optional<std::string> pairedUuid = pairs.Lookup(obs_source_get_uuid(scene));
+	if (!pairedUuid) {
+		return nullptr;
+	}
+
+	OBSSourceAutoRelease paired = obs_get_source_by_uuid(pairedUuid->c_str());
+	OBSCanvasAutoRelease pairedCanvas = paired ? obs_source_get_canvas(paired) : nullptr;
+	if (!paired || pairedCanvas.Get() != target.Get()) {
+		return nullptr;
+	}
+	return paired.Get();
+}
+
+void VerticalCanvas::SetPair(obs_source_t *scene, obs_source_t *verticalScene)
+{
+	if (!scene) {
+		return;
+	}
+
+	pairs.Set(obs_source_get_uuid(scene), verticalScene ? obs_source_get_uuid(verticalScene) : "");
+	blog(LOG_INFO, "[vertical] Scene '%s' paired with '%s'", obs_source_get_name(scene),
+	     verticalScene ? obs_source_get_name(verticalScene) : "(none)");
+
+	if (verticalScene && GetMainScene().Get() == scene) {
+		SetCurrentScene(verticalScene);
+		return;
+	}
+	NotifyChanged();
 }
 
 void VerticalCanvas::ApplyVideo()
@@ -184,6 +248,8 @@ void VerticalCanvas::Clear()
 		obs_canvas_set_channel(target, 0, nullptr);
 	}
 	currentScene = nullptr;
+	mainScene = nullptr;
+	pairs = ScenePairs{};
 	canvas = nullptr;
 	pendingSceneUuid.clear();
 	config = VerticalConfig{};
@@ -195,6 +261,11 @@ OBSDataAutoRelease VerticalCanvas::Save() const
 	OBSDataAutoRelease data = config.ToData();
 	OBSSource scene = GetCurrentScene();
 	obs_data_set_string(data, kCurrentSceneKey, scene ? obs_source_get_uuid(scene) : "");
+
+	ScenePairs saved = pairs;
+	saved.Prune(SourceExists);
+	OBSDataArrayAutoRelease pairData = saved.ToData();
+	obs_data_set_array(data, kPairsKey, pairData);
 	return data;
 }
 

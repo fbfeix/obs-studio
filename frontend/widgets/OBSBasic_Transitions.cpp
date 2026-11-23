@@ -297,6 +297,8 @@ void OBSBasic::TransitionToScene(OBSSource source, bool force, bool quickTransit
 {
 	obs_scene_t *scene = obs_scene_from_source(source);
 	bool usingPreviewProgram = IsPreviewProgramMode();
+	/* Keep the user's scene: duplication mode below swaps in a private copy. */
+	OBSSource originalSource = source;
 	if (!scene) {
 		return;
 	}
@@ -366,6 +368,7 @@ void OBSBasic::TransitionToScene(OBSSource source, bool force, bool quickTransit
 	if (force) {
 		obs_transition_set(transition, source);
 		OnEvent(OBS_FRONTEND_EVENT_SCENE_CHANGED);
+		verticalCanvas.OnMainSceneChanged(originalSource);
 	} else {
 		int duration = GetTransitionDuration();
 
@@ -399,6 +402,8 @@ void OBSBasic::TransitionToScene(OBSSource source, bool force, bool quickTransit
 
 		if (!success) {
 			TransitionFullyStopped();
+		} else if (!black) {
+			verticalCanvas.OnMainSceneChanged(originalSource);
 		}
 	}
 

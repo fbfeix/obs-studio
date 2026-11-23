@@ -42,6 +42,13 @@ public:
 	[[nodiscard]] OBSSource GetCurrentScene() const;
 	void SetCurrentScene(obs_source_t *scene);
 
+	/* Main canvas program scene changed: follow its paired vertical scene. */
+	void OnMainSceneChanged(obs_source_t *mainScene);
+	[[nodiscard]] OBSSource GetMainScene() const;
+	[[nodiscard]] OBSSource GetPairedScene(obs_source_t *mainScene) const;
+	/* Pass nullptr as verticalScene to remove the pair. */
+	void SetPair(obs_source_t *mainScene, obs_source_t *verticalScene);
+
 	[[nodiscard]] std::vector<OBSSource> GetScenes() const;
 	OBSSource CreateScene(const std::string &baseName);
 	void RemoveScene(obs_source_t *scene);
@@ -59,6 +66,8 @@ private:
 	VerticalConfig config;
 	OBSWeakCanvas canvas;
 	OBSWeakSource currentScene;
+	OBSWeakSource mainScene;
+	ScenePairs pairs;
 	std::string pendingSceneUuid;
 };
 

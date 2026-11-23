@@ -8,7 +8,9 @@
 
 #include <graphics/vec2.h>
 
+#include <QComboBox>
 #include <QHBoxLayout>
+#include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QPushButton>
@@ -55,6 +57,12 @@ VerticalCanvasDock::VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical_,
 	sceneButtons->addWidget(removeScene);
 	sceneButtons->addStretch();
 
+	pairLabel = new QLabel(this);
+	pairLabel->setWordWrap(true);
+	pairCombo = new QComboBox(this);
+	pairCombo->setToolTip(QTStr("Basic.Vertical.PairTooltip"));
+	connect(pairCombo, &QComboBox::currentIndexChanged, this, &VerticalCanvasDock::PairChanged);
+
 	itemList = new QListWidget(this);
 	connect(itemList, &QListWidget::itemChanged, this, &VerticalCanvasDock::ItemChanged);
 
@@ -83,6 +91,8 @@ VerticalCanvasDock::VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical_,
 	layout->addWidget(preview, 3);
 	layout->addWidget(sceneList);
 	layout->addLayout(sceneButtons);
+	layout->addWidget(pairLabel);
+	layout->addWidget(pairCombo);
 	layout->addWidget(itemList, 2);
 	layout->addLayout(itemButtons);
 
@@ -154,7 +164,45 @@ void VerticalCanvasDock::RefreshScenes()
 	refreshing = false;
 
 	ConnectSceneSignals(current);
+	RefreshPair();
 	RefreshItems();
+}
+
+void VerticalCanvasDock::RefreshPair()
+{
+	OBSSource mainScene = vertical.GetMainScene();
+	OBSSource paired = vertical.GetPairedScene(mainScene);
+
+	refreshing = true;
+	pairCombo->clear();
+	pairCombo->setEnabled(mainScene != nullptr);
+	pairLabel->setText(mainScene ? QTStr("Basic.Vertical.PairedWith").arg(QT_UTF8(obs_source_get_name(mainScene)))
+				     : QTStr("Basic.Vertical.NoMainScene"));
+
+	pairCombo->addItem(QTStr("Basic.Vertical.NotPaired"), QString());
+	for (const auto &scene : vertical.GetScenes()) {
+		pairCombo->addItem(QT_UTF8(obs_source_get_name(scene)), QT_UTF8(obs_source_get_uuid(scene)));
+		if (paired && scene.Get() == paired.Get()) {
+			pairCombo->setCurrentIndex(pairCombo->count() - 1);
+		}
+	}
+	refreshing = false;
+}
+
+void VerticalCanvasDock::PairChanged(int index)
+{
+	if (refreshing || index < 0) {
+		return;
+	}
+
+	OBSSource mainScene = vertical.GetMainScene();
+	if (!mainScene) {
+		return;
+	}
+
+	QByteArray uuid = pairCombo->itemData(index).toString().toUtf8();
+	OBSSourceAutoRelease verticalScene = uuid.isEmpty() ? nullptr : obs_get_source_by_uuid(uuid.constData());
+	vertical.SetPair(mainScene, verticalScene);
 }
 
 void VerticalCanvasDock::ConnectSceneSignals(obs_source_t *scene)

@@ -10,6 +10,8 @@
 #include <vector>
 
 class OBSQTDisplay;
+class QComboBox;
+class QLabel;
 class QListWidget;
 class QListWidgetItem;
 
@@ -38,6 +40,7 @@ private slots:
 	void FillItem();
 	void CenterItem();
 	void ItemChanged(QListWidgetItem *listItem);
+	void PairChanged(int index);
 
 private:
 	static void RenderPreview(void *data, uint32_t cx, uint32_t cy);
@@ -47,11 +50,14 @@ private:
 	[[nodiscard]] OBSSceneItem SelectedItem() const;
 	void ConnectSceneSignals(obs_source_t *scene);
 	void ApplyBounds(obs_bounds_type type);
+	void RefreshPair();
 
 	OBS::Vertical::VerticalCanvas &vertical;
 	OBSQTDisplay *preview = nullptr;
 	QListWidget *sceneList = nullptr;
 	QListWidget *itemList = nullptr;
+	QLabel *pairLabel = nullptr;
+	QComboBox *pairCombo = nullptr;
 	std::vector<OBSSignal> sceneSignals;
 	bool refreshing = false;
 
