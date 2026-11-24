@@ -251,7 +251,15 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	verticalDock = new OBSDock(this);
 	verticalDock->setObjectName(QStringLiteral("verticalCanvasDock"));
 	verticalDock->setWindowTitle(QTStr("Basic.Vertical.Title"));
-	verticalDock->setWidget(new VerticalCanvasDock(verticalCanvas, verticalDock));
+	auto *verticalContent = new VerticalCanvasDock(verticalCanvas, verticalDock);
+	verticalContent->SetStreamSettingsHandler([this]() { ShowVerticalStreamSettings(); });
+	verticalDock->setWidget(verticalContent);
+	verticalStreaming.SetStatusCallback(
+		[this](OBS::Vertical::VerticalStreaming::Status status, int code, const std::string &message) {
+			QMetaObject::invokeMethod(this, "VerticalStreamStatusChanged", Qt::QueuedConnection,
+						  Q_ARG(int, int(status)), Q_ARG(int, code),
+						  Q_ARG(QString, QT_UTF8(message.c_str())));
+		});
 	verticalDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
 				  QDockWidget::DockWidgetFloatable);
 	/* Not registered via AddDockWidget(): that takes ownership, but the dock
@@ -1263,6 +1271,7 @@ void OBSBasic::OBSInit()
 void OBSBasic::OnFirstLoad()
 {
 	OnEvent(OBS_FRONTEND_EVENT_FINISHED_LOADING);
+	ShowVerticalStreamIdleStatus();
 
 #ifdef WHATSNEW_ENABLED
 	/* Attempt to load init screen if available */
@@ -1332,6 +1341,8 @@ void OBSBasic::applicationShutdown() noexcept
 
 	service = nullptr;
 	verticalRecording.Reset();
+	verticalStreaming.Reset();
+	verticalStreaming.SetStatusCallback(nullptr);
 	outputHandler.reset();
 
 	delete interaction;

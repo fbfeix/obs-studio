@@ -20,6 +20,8 @@
 #include "OBSBasic.hpp"
 
 #include <components/UIValidation.hpp>
+#include <dialogs/VerticalStreamDialog.hpp>
+#include <docks/VerticalCanvasDock.hpp>
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
 #include <utility/YoutubeApiWrappers.hpp>
@@ -134,6 +136,7 @@ void OBSBasic::StopStreaming()
 	if (outputHandler->StreamingActive()) {
 		outputHandler->StopStreaming(streamingStopping);
 	}
+	verticalStreaming.Stop(streamingStopping);
 
 	// special case: force reset broadcast state if
 	// no autostart and no autostop selected
@@ -176,6 +179,7 @@ void OBSBasic::ForceStopStreaming()
 	if (outputHandler->StreamingActive()) {
 		outputHandler->StopStreaming(true);
 	}
+	verticalStreaming.Stop(true);
 
 	// special case: force reset broadcast state if
 	// no autostart and no autostop selected
@@ -267,6 +271,7 @@ void OBSBasic::StreamingStart()
 	OnEvent(OBS_FRONTEND_EVENT_STREAMING_STARTED);
 
 	OnActivate();
+	StartVerticalStream();
 
 #ifdef YOUTUBE_ENABLED
 	if (YouTubeAppDock::IsYTServiceSelected()) {
@@ -291,6 +296,8 @@ void OBSBasic::StreamStopping()
 
 void OBSBasic::StreamingStop(int code, QString last_error)
 {
+	verticalStreaming.Stop(code != OBS_OUTPUT_SUCCESS);
+
 	const char *errorDescription = "";
 	DStr errorMessage;
 	bool use_last_error = false;
@@ -476,4 +483,114 @@ bool OBSBasic::StreamingActive()
 		return false;
 	}
 	return outputHandler->StreamingActive();
+}
+
+std::filesystem::path OBSBasic::VerticalStreamSettingsPath() const
+{
+	return GetCurrentProfile().path / OBS::Vertical::VerticalStreamSettings::kFileName;
+}
+
+OBS::Vertical::VerticalStreamSettings OBSBasic::LoadVerticalStreamSettings() const
+{
+	std::string path = VerticalStreamSettingsPath().u8string();
+	OBSDataAutoRelease data = obs_data_create_from_json_file_safe(path.c_str(), "bak");
+	return OBS::Vertical::VerticalStreamSettings::FromData(data);
+}
+
+void OBSBasic::SaveVerticalStreamSettings(const OBS::Vertical::VerticalStreamSettings &settings) const
+{
+	std::string path = VerticalStreamSettingsPath().u8string();
+	OBSDataAutoRelease data = settings.ToData();
+	if (!obs_data_save_json_safe(data, path.c_str(), "tmp", "bak")) {
+		blog(LOG_WARNING, "[vertical] Failed to save vertical stream settings");
+	}
+}
+
+void OBSBasic::StartVerticalStream()
+{
+	OBS::Vertical::VerticalStreamSettings settings = LoadVerticalStreamSettings();
+	if (!settings.enabled) {
+		return;
+	}
+
+	if (settings.Validate() != OBS::Vertical::StreamSettingsError::None) {
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Invalid"), true);
+		return;
+	}
+
+	OBSCanvas canvas = verticalCanvas.GetCanvas();
+	obs_output_t *mainOutput = outputHandler ? outputHandler->streamOutput.Get() : nullptr;
+	verticalStreaming.Start(mainOutput, canvas, settings);
+}
+
+void OBSBasic::ShowVerticalStreamSettings()
+{
+	VerticalStreamDialog dialog(LoadVerticalStreamSettings(), this);
+	if (dialog.exec() != QDialog::Accepted) {
+		return;
+	}
+
+	SaveVerticalStreamSettings(dialog.Settings());
+	if (!verticalStreaming.Active()) {
+		ShowVerticalStreamIdleStatus();
+	}
+}
+
+void OBSBasic::ShowVerticalStreamIdleStatus()
+{
+	bool enabled = LoadVerticalStreamSettings().enabled;
+	SetVerticalStreamStatus(
+		QTStr(enabled ? "Basic.Vertical.Stream.Status.Ready" : "Basic.Vertical.Stream.Status.Off"), false);
+}
+
+void OBSBasic::SetVerticalStreamStatus(const QString &status, bool error)
+{
+	auto *dock = verticalDock ? qobject_cast<VerticalCanvasDock *>(verticalDock->widget()) : nullptr;
+	if (dock) {
+		dock->SetStreamStatus(status, error);
+	}
+}
+
+namespace {
+QString VerticalStreamErrorText(int code, const QString &message)
+{
+	switch (code) {
+	case OBS_OUTPUT_BAD_PATH:
+		return QTStr("Output.ConnectFail.BadPath");
+	case OBS_OUTPUT_CONNECT_FAILED:
+		return QTStr("Output.ConnectFail.ConnectFailed");
+	case OBS_OUTPUT_INVALID_STREAM:
+		return QTStr("Output.ConnectFail.InvalidStream");
+	case OBS_OUTPUT_DISCONNECTED:
+		return QTStr("Output.ConnectFail.Disconnected");
+	default:
+		return message.isEmpty() ? QTStr("Output.ConnectFail.Error") : message;
+	}
+}
+} // namespace
+
+void OBSBasic::VerticalStreamStatusChanged(int status, int code, QString message)
+{
+	using Status = OBS::Vertical::VerticalStreaming::Status;
+
+	switch (Status(status)) {
+	case Status::Connecting:
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Connecting"), false);
+		break;
+	case Status::Live:
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Live"), false);
+		break;
+	case Status::Reconnecting:
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Reconnecting"), false);
+		break;
+	case Status::Stopped:
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Stopped"), false);
+		break;
+	case Status::Failed: {
+		QString text = QTStr("Basic.Vertical.Stream.Status.Failed").arg(VerticalStreamErrorText(code, message));
+		SetVerticalStreamStatus(text, true);
+		ui->statusbar->showMessage(text, 10000);
+		break;
+	}
+	}
 }

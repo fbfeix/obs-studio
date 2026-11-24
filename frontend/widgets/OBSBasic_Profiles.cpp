@@ -725,6 +725,7 @@ void OBSBasic::ActivateProfile(const OBSProfile &profile, bool reset)
 #endif
 
 	OnEvent(OBS_FRONTEND_EVENT_PROFILE_CHANGED);
+	ShowVerticalStreamIdleStatus();
 
 	if (!restartRequirements.empty()) {
 		std::string requirements = std::accumulate(

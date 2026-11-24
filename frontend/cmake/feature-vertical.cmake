@@ -19,10 +19,14 @@ target_link_libraries(obs-studio PRIVATE OBS::frontend-vertical-core)
 target_sources(
   obs-studio
   PRIVATE
+    dialogs/VerticalStreamDialog.cpp
+    dialogs/VerticalStreamDialog.hpp
     docks/VerticalCanvasDock.cpp
     docks/VerticalCanvasDock.hpp
     utility/vertical/VerticalCanvas.cpp
     utility/vertical/VerticalCanvas.hpp
     utility/vertical/VerticalRecording.cpp
     utility/vertical/VerticalRecording.hpp
+    utility/vertical/VerticalStreaming.cpp
+    utility/vertical/VerticalStreaming.hpp
 )

@@ -86,6 +86,19 @@ VerticalCanvasDock::VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical_,
 	}
 	itemButtons->addStretch();
 
+	auto *streamRow = new QHBoxLayout();
+	streamStatus = new QLabel(this);
+	streamStatus->setWordWrap(true);
+	auto *streamSettings = new QPushButton(QTStr("Basic.Vertical.Stream.Button"), this);
+	connect(streamSettings, &QPushButton::clicked, this, [this]() {
+		if (openStreamSettings) {
+			openStreamSettings();
+		}
+	});
+	streamRow->addWidget(streamStatus, 1);
+	streamRow->addWidget(streamSettings);
+	SetStreamStatus(QTStr("Basic.Vertical.Stream.Status.Off"), false);
+
 	auto *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(4, 4, 4, 4);
 	layout->addWidget(preview, 3);
@@ -95,6 +108,7 @@ VerticalCanvasDock::VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical_,
 	layout->addWidget(pairCombo);
 	layout->addWidget(itemList, 2);
 	layout->addLayout(itemButtons);
+	layout->addLayout(streamRow);
 
 	vertical.SetChangedCallback(
 		[this]() { QMetaObject::invokeMethod(this, "RefreshScenes", Qt::QueuedConnection); });
@@ -166,6 +180,12 @@ void VerticalCanvasDock::RefreshScenes()
 	ConnectSceneSignals(current);
 	RefreshPair();
 	RefreshItems();
+}
+
+void VerticalCanvasDock::SetStreamStatus(const QString &status, bool error)
+{
+	streamStatus->setText(status);
+	streamStatus->setStyleSheet(error ? "color: #e05050;" : "");
 }
 
 void VerticalCanvasDock::RefreshPair()

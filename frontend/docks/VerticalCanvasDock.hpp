@@ -6,6 +6,7 @@
 
 #include <QWidget>
 
+#include <functional>
 #include <mutex>
 #include <vector>
 
@@ -24,8 +25,11 @@ public:
 	explicit VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical, QWidget *parent = nullptr);
 	~VerticalCanvasDock() override;
 
+	void SetStreamSettingsHandler(std::function<void()> handler) { openStreamSettings = std::move(handler); }
+
 public slots:
 	void RefreshScenes();
+	void SetStreamStatus(const QString &status, bool error);
 	void RefreshItems();
 
 private slots:
@@ -58,6 +62,8 @@ private:
 	QListWidget *itemList = nullptr;
 	QLabel *pairLabel = nullptr;
 	QComboBox *pairCombo = nullptr;
+	QLabel *streamStatus = nullptr;
+	std::function<void()> openStreamSettings;
 	std::vector<OBSSignal> sceneSignals;
 	bool refreshing = false;
 
