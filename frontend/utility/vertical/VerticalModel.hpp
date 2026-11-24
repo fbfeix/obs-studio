@@ -98,4 +98,25 @@ struct VerticalStreamSettings {
 	[[nodiscard]] StreamSettingsError Validate() const;
 };
 
+/* Decides when the vertical stream starts and stops. A stream started with
+ * the main stream ends with it; a manually started one runs independently. */
+class StreamSession {
+public:
+	enum class Origin { None, WithMain, Manual };
+
+	/* Returns true if the vertical stream should be started now. */
+	bool OnMainStarted(bool enabled);
+	/* Returns true if the vertical stream should be stopped now. */
+	bool OnMainStopped();
+	/* Returns true to start, false to stop the vertical stream. */
+	bool OnManualToggle();
+	/* The vertical stream ended on its own (error or stop). */
+	void OnEnded() noexcept { origin = Origin::None; }
+
+	[[nodiscard]] bool Active() const noexcept { return origin != Origin::None; }
+
+private:
+	Origin origin = Origin::None;
+};
+
 } // namespace OBS::Vertical

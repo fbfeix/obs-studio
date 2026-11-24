@@ -432,6 +432,55 @@ static void stream_validate_allows_srt_without_key(void **)
 	assert_int_equal(settings.Validate(), StreamSettingsError::None);
 }
 
+static void session_main_start_starts_when_enabled(void **)
+{
+	StreamSession session;
+
+	assert_true(session.OnMainStarted(true));
+	assert_true(session.Active());
+	assert_true(session.OnMainStopped());
+	assert_false(session.Active());
+}
+
+static void session_main_start_ignored_when_disabled(void **)
+{
+	StreamSession session;
+
+	assert_false(session.OnMainStarted(false));
+	assert_false(session.OnMainStopped());
+}
+
+static void session_manual_start_survives_main_stop(void **)
+{
+	StreamSession session;
+
+	assert_true(session.OnManualToggle());
+	assert_false(session.OnMainStarted(true));
+	assert_false(session.OnMainStopped());
+	assert_true(session.Active());
+}
+
+static void session_manual_toggle_stops_auto_stream(void **)
+{
+	StreamSession session;
+	session.OnMainStarted(true);
+
+	assert_false(session.OnManualToggle());
+	assert_false(session.Active());
+	assert_false(session.OnMainStopped());
+}
+
+static void session_ended_stream_can_restart(void **)
+{
+	StreamSession session;
+	session.OnManualToggle();
+
+	session.OnEnded();
+
+	assert_false(session.Active());
+	assert_true(session.OnManualToggle());
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -473,6 +522,11 @@ int main()
 		cmocka_unit_test(stream_validate_rejects_unknown_scheme),
 		cmocka_unit_test(stream_validate_requires_key_for_rtmp),
 		cmocka_unit_test(stream_validate_allows_srt_without_key),
+		cmocka_unit_test(session_main_start_starts_when_enabled),
+		cmocka_unit_test(session_main_start_ignored_when_disabled),
+		cmocka_unit_test(session_manual_start_survives_main_stop),
+		cmocka_unit_test(session_manual_toggle_stops_auto_stream),
+		cmocka_unit_test(session_ended_stream_can_restart),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);

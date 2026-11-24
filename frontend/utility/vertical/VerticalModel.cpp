@@ -252,4 +252,32 @@ StreamSettingsError VerticalStreamSettings::Validate() const
 	return StreamSettingsError::None;
 }
 
+bool StreamSession::OnMainStarted(bool enabled)
+{
+	if (Active() || !enabled) {
+		return false;
+	}
+	origin = Origin::WithMain;
+	return true;
+}
+
+bool StreamSession::OnMainStopped()
+{
+	if (origin != Origin::WithMain) {
+		return false;
+	}
+	origin = Origin::None;
+	return true;
+}
+
+bool StreamSession::OnManualToggle()
+{
+	if (Active()) {
+		origin = Origin::None;
+		return false;
+	}
+	origin = Origin::Manual;
+	return true;
+}
+
 } // namespace OBS::Vertical
