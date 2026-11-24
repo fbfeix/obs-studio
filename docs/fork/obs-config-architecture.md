@@ -100,7 +100,7 @@ oder Aufnahme.
 | Vertical-Konfiguration | Szenensammlung, Schlüssel `vertical` | `width`, `height`, `record`, `stream`, `canvas_uuid`, `current_scene_uuid` |
 | Szenenpaare | Szenensammlung, `vertical.pairs` | `[{main: <UUID>, vertical: <UUID>}]` |
 | Vertical-Aufnahme | zur Laufzeit | klont Encoder/Output der Hauptaufnahme, Datei `<name>-vertical.<ext>` |
-| Vertical-Stream (geplant) | Profil, eigene Datei | Ziel + Key getrennt von der Sammlung |
+| Vertical-Stream | Profil, `vertical_service.json` | `enabled`, `server`, `key`, `video_bitrate`; startet nach dem Hauptstream, eigene Encoder |
 
 Code: `frontend/utility/vertical/` (Logik), `frontend/docks/VerticalCanvasDock.*` (UI).
 
