@@ -58,6 +58,8 @@ struct SimpleOutput : BasicOutputHandler {
 	virtual void StopRecording(bool force) override;
 	virtual void StopReplayBuffer(bool force) override;
 	virtual bool StreamingActive() const override;
+	obs_encoder_t *StreamVideoEncoder() const override { return videoStreaming; }
+	obs_encoder_t *StreamAudioEncoder() const override { return audioStreaming; }
 	virtual bool RecordingActive() const override;
 	virtual bool ReplayBufferActive() const override;
 };

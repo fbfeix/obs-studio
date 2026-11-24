@@ -1609,6 +1609,7 @@ void OBSBasic::ClearSceneData()
 	 * destroyed with the canvas below; stop it first or its output never ends. */
 	verticalRecording.Reset();
 	verticalStreaming.Reset();
+	verticalStreamSession.OnEnded();
 	verticalCanvas.Clear();
 
 	auto cb = [](void *, obs_source_t *source) {

@@ -41,6 +41,8 @@ struct AdvancedOutput : BasicOutputHandler {
 	virtual void StopRecording(bool force) override;
 	virtual void StopReplayBuffer(bool force) override;
 	virtual bool StreamingActive() const override;
+	obs_encoder_t *StreamVideoEncoder() const override { return videoStreaming; }
+	obs_encoder_t *StreamAudioEncoder() const override { return streamAudioEnc; }
 	virtual bool RecordingActive() const override;
 	virtual bool ReplayBufferActive() const override;
 	bool allowsMultiTrack();

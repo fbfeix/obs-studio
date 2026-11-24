@@ -1158,15 +1158,19 @@ private:
 	OBS::Vertical::VerticalCanvas verticalCanvas;
 	OBS::Vertical::VerticalRecording verticalRecording;
 	OBS::Vertical::VerticalStreaming verticalStreaming;
+	OBS::Vertical::StreamSession verticalStreamSession;
 	QPointer<OBSDock> verticalDock;
 
 	[[nodiscard]] std::filesystem::path VerticalStreamSettingsPath() const;
 	[[nodiscard]] OBS::Vertical::VerticalStreamSettings LoadVerticalStreamSettings() const;
 	void SaveVerticalStreamSettings(const OBS::Vertical::VerticalStreamSettings &settings) const;
 	void StartVerticalStream();
+	void StopVerticalStreamWithMain(bool force);
+	void ToggleVerticalStream();
+	bool LaunchVerticalStream(const OBS::Vertical::VerticalStreamSettings &settings, uint32_t delaySec);
 	void ShowVerticalStreamSettings();
 	void ShowVerticalStreamIdleStatus();
-	void SetVerticalStreamStatus(const QString &status, bool error);
+	void SetVerticalStreamStatus(const QString &status, bool error, bool active = false);
 
 	static void CanvasRemoved(void *data, calldata_t *params);
 	void ClearCanvases();

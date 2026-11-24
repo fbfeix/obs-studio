@@ -15,6 +15,7 @@ class QComboBox;
 class QLabel;
 class QListWidget;
 class QListWidgetItem;
+class QPushButton;
 
 /* Dock content for the native vertical canvas: a live preview, the canvas'
  * scene list and the items of the current vertical scene. */
@@ -26,10 +27,11 @@ public:
 	~VerticalCanvasDock() override;
 
 	void SetStreamSettingsHandler(std::function<void()> handler) { openStreamSettings = std::move(handler); }
+	void SetStreamToggleHandler(std::function<void()> handler) { toggleStream = std::move(handler); }
 
 public slots:
 	void RefreshScenes();
-	void SetStreamStatus(const QString &status, bool error);
+	void SetStreamStatus(const QString &status, bool error, bool active);
 	void RefreshItems();
 
 private slots:
@@ -63,7 +65,9 @@ private:
 	QLabel *pairLabel = nullptr;
 	QComboBox *pairCombo = nullptr;
 	QLabel *streamStatus = nullptr;
+	QPushButton *streamToggle = nullptr;
 	std::function<void()> openStreamSettings;
+	std::function<void()> toggleStream;
 	std::vector<OBSSignal> sceneSignals;
 	bool refreshing = false;
 

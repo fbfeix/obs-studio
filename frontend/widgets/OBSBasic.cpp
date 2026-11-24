@@ -253,6 +253,7 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	verticalDock->setWindowTitle(QTStr("Basic.Vertical.Title"));
 	auto *verticalContent = new VerticalCanvasDock(verticalCanvas, verticalDock);
 	verticalContent->SetStreamSettingsHandler([this]() { ShowVerticalStreamSettings(); });
+	verticalContent->SetStreamToggleHandler([this]() { ToggleVerticalStream(); });
 	verticalDock->setWidget(verticalContent);
 	verticalStreaming.SetStatusCallback(
 		[this](OBS::Vertical::VerticalStreaming::Status status, int code, const std::string &message) {
@@ -1342,6 +1343,7 @@ void OBSBasic::applicationShutdown() noexcept
 	service = nullptr;
 	verticalRecording.Reset();
 	verticalStreaming.Reset();
+	verticalStreamSession.OnEnded();
 	verticalStreaming.SetStatusCallback(nullptr);
 	outputHandler.reset();
 

@@ -21,7 +21,10 @@ public:
 	 * stream could not be set up) and message the output's last error, if any. */
 	using StatusFn = std::function<void(Status status, int code, const std::string &message)>;
 
-	bool Start(obs_output_t *mainOutput, obs_canvas_t *canvas, const VerticalStreamSettings &settings);
+	/* The template encoders only provide encoder type and settings; null
+	 * falls back to x264/AAC. delaySec mirrors the main stream's delay. */
+	bool Start(obs_encoder_t *videoTemplate, obs_encoder_t *audioTemplate, obs_canvas_t *canvas,
+		   const VerticalStreamSettings &settings, uint32_t delaySec);
 	void Stop(bool force);
 	/* Release the output, service and encoders; required before libobs shuts down. */
 	void Reset();

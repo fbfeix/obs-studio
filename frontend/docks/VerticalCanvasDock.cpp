@@ -95,9 +95,17 @@ VerticalCanvasDock::VerticalCanvasDock(OBS::Vertical::VerticalCanvas &vertical_,
 			openStreamSettings();
 		}
 	});
+	streamToggle = new QPushButton(this);
+	streamToggle->setToolTip(QTStr("Basic.Vertical.Stream.GoLiveTooltip"));
+	connect(streamToggle, &QPushButton::clicked, this, [this]() {
+		if (toggleStream) {
+			toggleStream();
+		}
+	});
 	streamRow->addWidget(streamStatus, 1);
+	streamRow->addWidget(streamToggle);
 	streamRow->addWidget(streamSettings);
-	SetStreamStatus(QTStr("Basic.Vertical.Stream.Status.Off"), false);
+	SetStreamStatus(QTStr("Basic.Vertical.Stream.Status.Off"), false, false);
 
 	auto *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(4, 4, 4, 4);
@@ -182,8 +190,9 @@ void VerticalCanvasDock::RefreshScenes()
 	RefreshItems();
 }
 
-void VerticalCanvasDock::SetStreamStatus(const QString &status, bool error)
+void VerticalCanvasDock::SetStreamStatus(const QString &status, bool error, bool active)
 {
+	streamToggle->setText(QTStr(active ? "Basic.Vertical.Stream.Stop" : "Basic.Vertical.Stream.GoLive"));
 	streamStatus->setText(status);
 	streamStatus->setStyleSheet(error ? "color: #e05050;" : "");
 }

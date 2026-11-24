@@ -13,7 +13,8 @@ constexpr int kReconnectRetries = 20;
 constexpr int kReconnectDelaySec = 2;
 } // namespace
 
-bool VerticalStreaming::Start(obs_output_t *mainOutput, obs_canvas_t *canvas, const VerticalStreamSettings &settings)
+bool VerticalStreaming::Start(obs_encoder_t *mainVideo, obs_encoder_t *mainAudio, obs_canvas_t *canvas,
+			      const VerticalStreamSettings &settings, uint32_t delaySec)
 {
 	if (Active()) {
 		return true;
@@ -24,10 +25,6 @@ bool VerticalStreaming::Start(obs_output_t *mainOutput, obs_canvas_t *canvas, co
 	if (!canvas || !obs_canvas_has_video(canvas)) {
 		return Fail("no vertical canvas");
 	}
-
-	/* Main encoders are only templates: the multitrack output has none. */
-	obs_encoder_t *mainVideo = mainOutput ? obs_output_get_video_encoder(mainOutput) : nullptr;
-	obs_encoder_t *mainAudio = mainOutput ? obs_output_get_audio_encoder(mainOutput, 0) : nullptr;
 
 	OBSDataAutoRelease videoSettings = mainVideo ? obs_encoder_get_settings(mainVideo) : obs_data_create();
 	OBSDataAutoRelease ownVideoSettings = obs_data_create();
@@ -73,6 +70,7 @@ bool VerticalStreaming::Start(obs_output_t *mainOutput, obs_canvas_t *canvas, co
 	obs_output_set_video_encoder(output, videoEncoder);
 	obs_output_set_audio_encoder(output, audioEncoder, 0);
 	obs_output_set_reconnect_settings(output, kReconnectRetries, kReconnectDelaySec);
+	obs_output_set_delay(output, delaySec, OBS_OUTPUT_DELAY_PRESERVE);
 
 	signal_handler_t *handler = obs_output_get_signal_handler(output);
 	outputSignals.emplace_back(handler, "start", OnStart, this);

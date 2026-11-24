@@ -82,6 +82,10 @@ struct BasicOutputHandler {
 	virtual void StopReplayBuffer(bool force = false) { (void)force; }
 	virtual void StopVirtualCam();
 	virtual bool StreamingActive() const = 0;
+	/* Configured streaming encoders; the vertical stream copies their type
+	 * and settings. May be null (e.g. before the first setup). */
+	virtual obs_encoder_t *StreamVideoEncoder() const { return nullptr; }
+	virtual obs_encoder_t *StreamAudioEncoder() const { return nullptr; }
 	virtual bool RecordingActive() const = 0;
 	virtual bool ReplayBufferActive() const { return false; }
 	virtual bool VirtualCamActive() const;

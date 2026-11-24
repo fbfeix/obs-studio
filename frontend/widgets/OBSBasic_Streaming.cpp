@@ -136,7 +136,7 @@ void OBSBasic::StopStreaming()
 	if (outputHandler->StreamingActive()) {
 		outputHandler->StopStreaming(streamingStopping);
 	}
-	verticalStreaming.Stop(streamingStopping);
+	StopVerticalStreamWithMain(streamingStopping);
 
 	// special case: force reset broadcast state if
 	// no autostart and no autostop selected
@@ -179,7 +179,7 @@ void OBSBasic::ForceStopStreaming()
 	if (outputHandler->StreamingActive()) {
 		outputHandler->StopStreaming(true);
 	}
-	verticalStreaming.Stop(true);
+	StopVerticalStreamWithMain(true);
 
 	// special case: force reset broadcast state if
 	// no autostart and no autostop selected
@@ -296,7 +296,7 @@ void OBSBasic::StreamStopping()
 
 void OBSBasic::StreamingStop(int code, QString last_error)
 {
-	verticalStreaming.Stop(code != OBS_OUTPUT_SUCCESS);
+	StopVerticalStreamWithMain(code != OBS_OUTPUT_SUCCESS);
 
 	const char *errorDescription = "";
 	DStr errorMessage;
@@ -509,18 +509,49 @@ void OBSBasic::SaveVerticalStreamSettings(const OBS::Vertical::VerticalStreamSet
 void OBSBasic::StartVerticalStream()
 {
 	OBS::Vertical::VerticalStreamSettings settings = LoadVerticalStreamSettings();
-	if (!settings.enabled) {
+	if (!verticalStreamSession.OnMainStarted(settings.enabled)) {
 		return;
 	}
 
-	if (settings.Validate() != OBS::Vertical::StreamSettingsError::None) {
-		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Invalid"), true);
+	/* Keep both streams in sync when the main stream is delayed. */
+	uint32_t delaySec =
+		outputHandler && outputHandler->streamOutput ? obs_output_get_delay(outputHandler->streamOutput) : 0;
+	LaunchVerticalStream(settings, delaySec);
+}
+
+void OBSBasic::StopVerticalStreamWithMain(bool force)
+{
+	if (verticalStreamSession.OnMainStopped()) {
+		verticalStreaming.Stop(force);
+	}
+}
+
+void OBSBasic::ToggleVerticalStream()
+{
+	if (!verticalStreamSession.OnManualToggle()) {
+		verticalStreaming.Stop(false);
 		return;
+	}
+
+	LaunchVerticalStream(LoadVerticalStreamSettings(), 0);
+}
+
+bool OBSBasic::LaunchVerticalStream(const OBS::Vertical::VerticalStreamSettings &settings, uint32_t delaySec)
+{
+	if (settings.Validate() != OBS::Vertical::StreamSettingsError::None) {
+		verticalStreamSession.OnEnded();
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Invalid"), true);
+		return false;
 	}
 
 	OBSCanvas canvas = verticalCanvas.GetCanvas();
-	obs_output_t *mainOutput = outputHandler ? outputHandler->streamOutput.Get() : nullptr;
-	verticalStreaming.Start(mainOutput, canvas, settings);
+	obs_encoder_t *videoTemplate = outputHandler ? outputHandler->StreamVideoEncoder() : nullptr;
+	obs_encoder_t *audioTemplate = outputHandler ? outputHandler->StreamAudioEncoder() : nullptr;
+	if (!verticalStreaming.Start(videoTemplate, audioTemplate, canvas, settings, delaySec)) {
+		verticalStreamSession.OnEnded();
+		return false;
+	}
+	return true;
 }
 
 void OBSBasic::ShowVerticalStreamSettings()
@@ -543,11 +574,11 @@ void OBSBasic::ShowVerticalStreamIdleStatus()
 		QTStr(enabled ? "Basic.Vertical.Stream.Status.Ready" : "Basic.Vertical.Stream.Status.Off"), false);
 }
 
-void OBSBasic::SetVerticalStreamStatus(const QString &status, bool error)
+void OBSBasic::SetVerticalStreamStatus(const QString &status, bool error, bool active)
 {
 	auto *dock = verticalDock ? qobject_cast<VerticalCanvasDock *>(verticalDock->widget()) : nullptr;
 	if (dock) {
-		dock->SetStreamStatus(status, error);
+		dock->SetStreamStatus(status, error, active);
 	}
 }
 
@@ -575,18 +606,20 @@ void OBSBasic::VerticalStreamStatusChanged(int status, int code, QString message
 
 	switch (Status(status)) {
 	case Status::Connecting:
-		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Connecting"), false);
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Connecting"), false, true);
 		break;
 	case Status::Live:
-		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Live"), false);
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Live"), false, true);
 		break;
 	case Status::Reconnecting:
-		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Reconnecting"), false);
+		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Reconnecting"), false, true);
 		break;
 	case Status::Stopped:
+		verticalStreamSession.OnEnded();
 		SetVerticalStreamStatus(QTStr("Basic.Vertical.Stream.Status.Stopped"), false);
 		break;
 	case Status::Failed: {
+		verticalStreamSession.OnEnded();
 		QString text = QTStr("Basic.Vertical.Stream.Status.Failed").arg(VerticalStreamErrorText(code, message));
 		SetVerticalStreamStatus(text, true);
 		ui->statusbar->showMessage(text, 10000);
