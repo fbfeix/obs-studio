@@ -330,6 +330,108 @@ static void pairs_from_data_skips_incomplete_entries(void **)
 	assert_int_equal(pairs.Size(), 1);
 }
 
+static void stream_settings_defaults(void **)
+{
+	VerticalStreamSettings settings;
+
+	assert_false(settings.enabled);
+	assert_true(settings.server.empty());
+	assert_true(settings.key.empty());
+	assert_int_equal(settings.videoBitrate, 6000);
+}
+
+static void stream_settings_from_null_are_defaults(void **)
+{
+	VerticalStreamSettings settings = VerticalStreamSettings::FromData(nullptr);
+
+	assert_false(settings.enabled);
+	assert_int_equal(settings.videoBitrate, 6000);
+}
+
+static void stream_settings_round_trip(void **)
+{
+	VerticalStreamSettings in;
+	in.enabled = true;
+	in.server = "rtmps://live.example.com/app";
+	in.key = "secret";
+	in.videoBitrate = 4500;
+
+	obs_data_t *data = in.ToData();
+	VerticalStreamSettings out = VerticalStreamSettings::FromData(data);
+	obs_data_release(data);
+
+	assert_true(out.enabled);
+	assert_string_equal(out.server.c_str(), "rtmps://live.example.com/app");
+	assert_string_equal(out.key.c_str(), "secret");
+	assert_int_equal(out.videoBitrate, 4500);
+}
+
+static void stream_settings_trim_pasted_whitespace(void **)
+{
+	obs_data_t *data = obs_data_create();
+	obs_data_set_string(data, "server", "  rtmp://a.example/live\n");
+	obs_data_set_string(data, "key", "\tabc-123 \r\n");
+
+	VerticalStreamSettings settings = VerticalStreamSettings::FromData(data);
+	obs_data_release(data);
+
+	assert_string_equal(settings.server.c_str(), "rtmp://a.example/live");
+	assert_string_equal(settings.key.c_str(), "abc-123");
+}
+
+static void stream_settings_reject_out_of_range_bitrate(void **)
+{
+	obs_data_t *data = obs_data_create();
+	obs_data_set_int(data, "video_bitrate", 100);
+
+	VerticalStreamSettings settings = VerticalStreamSettings::FromData(data);
+	obs_data_release(data);
+
+	assert_int_equal(settings.videoBitrate, 6000);
+}
+
+static void stream_validate_accepts_rtmp_with_key(void **)
+{
+	VerticalStreamSettings settings;
+	settings.server = "rtmps://live.example.com/app";
+	settings.key = "secret";
+
+	assert_int_equal(settings.Validate(), StreamSettingsError::None);
+}
+
+static void stream_validate_requires_server(void **)
+{
+	VerticalStreamSettings settings;
+	settings.key = "secret";
+
+	assert_int_equal(settings.Validate(), StreamSettingsError::MissingServer);
+}
+
+static void stream_validate_rejects_unknown_scheme(void **)
+{
+	VerticalStreamSettings settings;
+	settings.server = "https://example.com";
+	settings.key = "secret";
+
+	assert_int_equal(settings.Validate(), StreamSettingsError::UnsupportedProtocol);
+}
+
+static void stream_validate_requires_key_for_rtmp(void **)
+{
+	VerticalStreamSettings settings;
+	settings.server = "rtmp://live.example.com/app";
+
+	assert_int_equal(settings.Validate(), StreamSettingsError::MissingKey);
+}
+
+static void stream_validate_allows_srt_without_key(void **)
+{
+	VerticalStreamSettings settings;
+	settings.server = "srt://live.example.com:9000?streamid=abc";
+
+	assert_int_equal(settings.Validate(), StreamSettingsError::None);
+}
+
 int main()
 {
 	const struct CMUnitTest tests[] = {
@@ -361,6 +463,16 @@ int main()
 		cmocka_unit_test(pairs_round_trip),
 		cmocka_unit_test(pairs_from_null_is_empty),
 		cmocka_unit_test(pairs_from_data_skips_incomplete_entries),
+		cmocka_unit_test(stream_settings_defaults),
+		cmocka_unit_test(stream_settings_from_null_are_defaults),
+		cmocka_unit_test(stream_settings_round_trip),
+		cmocka_unit_test(stream_settings_trim_pasted_whitespace),
+		cmocka_unit_test(stream_settings_reject_out_of_range_bitrate),
+		cmocka_unit_test(stream_validate_accepts_rtmp_with_key),
+		cmocka_unit_test(stream_validate_requires_server),
+		cmocka_unit_test(stream_validate_rejects_unknown_scheme),
+		cmocka_unit_test(stream_validate_requires_key_for_rtmp),
+		cmocka_unit_test(stream_validate_allows_srt_without_key),
 	};
 
 	return cmocka_run_group_tests(tests, NULL, NULL);

@@ -78,4 +78,24 @@ private:
 	std::map<std::string, std::string> pairs;
 };
 
+enum class StreamSettingsError { None, MissingServer, UnsupportedProtocol, MissingKey };
+
+/* Destination of the vertical stream. Stored per profile (it holds the stream
+ * key), never in the scene collection. */
+struct VerticalStreamSettings {
+	static constexpr const char *kFileName = "vertical_service.json";
+	static constexpr int kDefaultBitrate = 6000;
+	static constexpr int kMinBitrate = 500;
+	static constexpr int kMaxBitrate = 50000;
+
+	bool enabled = false;
+	std::string server;
+	std::string key;
+	int videoBitrate = kDefaultBitrate;
+
+	static VerticalStreamSettings FromData(obs_data_t *data);
+	[[nodiscard]] obs_data_t *ToData() const;
+	[[nodiscard]] StreamSettingsError Validate() const;
+};
+
 } // namespace OBS::Vertical

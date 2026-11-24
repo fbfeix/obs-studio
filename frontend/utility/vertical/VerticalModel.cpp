@@ -186,4 +186,70 @@ ScenePairs ScenePairs::FromData(obs_data_array_t *array)
 	return result;
 }
 
+namespace {
+std::string Trimmed(const char *text)
+{
+	std::string value = text ? text : "";
+	constexpr const char *kWhitespace = " \t\r\n";
+	size_t first = value.find_first_not_of(kWhitespace);
+	if (first == std::string::npos) {
+		return {};
+	}
+	size_t last = value.find_last_not_of(kWhitespace);
+	return value.substr(first, last - first + 1);
+}
+
+bool HasScheme(const std::string &url, const char *scheme)
+{
+	return url.rfind(scheme, 0) == 0;
+}
+} // namespace
+
+VerticalStreamSettings VerticalStreamSettings::FromData(obs_data_t *data)
+{
+	VerticalStreamSettings settings;
+	if (!data) {
+		return settings;
+	}
+
+	settings.enabled = obs_data_get_bool(data, "enabled");
+	settings.server = Trimmed(obs_data_get_string(data, "server"));
+	settings.key = Trimmed(obs_data_get_string(data, "key"));
+
+	if (obs_data_has_user_value(data, "video_bitrate")) {
+		long long bitrate = obs_data_get_int(data, "video_bitrate");
+		if (bitrate >= kMinBitrate && bitrate <= kMaxBitrate) {
+			settings.videoBitrate = int(bitrate);
+		}
+	}
+	return settings;
+}
+
+obs_data_t *VerticalStreamSettings::ToData() const
+{
+	obs_data_t *data = obs_data_create();
+	obs_data_set_bool(data, "enabled", enabled);
+	obs_data_set_string(data, "server", server.c_str());
+	obs_data_set_string(data, "key", key.c_str());
+	obs_data_set_int(data, "video_bitrate", videoBitrate);
+	return data;
+}
+
+StreamSettingsError VerticalStreamSettings::Validate() const
+{
+	if (server.empty()) {
+		return StreamSettingsError::MissingServer;
+	}
+
+	bool rtmp = HasScheme(server, "rtmp://") || HasScheme(server, "rtmps://");
+	bool keyInUrl = HasScheme(server, "srt://") || HasScheme(server, "rist://");
+	if (!rtmp && !keyInUrl) {
+		return StreamSettingsError::UnsupportedProtocol;
+	}
+	if (rtmp && key.empty()) {
+		return StreamSettingsError::MissingKey;
+	}
+	return StreamSettingsError::None;
+}
+
 } // namespace OBS::Vertical
