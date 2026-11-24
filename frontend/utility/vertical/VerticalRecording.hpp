@@ -21,9 +21,19 @@ public:
 	[[nodiscard]] const char *LastError() const;
 
 private:
-	OBSOutputAutoRelease output;
-	OBSEncoderAutoRelease videoEncoder;
-	std::vector<OBSEncoderAutoRelease> audioEncoders;
+	struct Session {
+		OBSOutputAutoRelease output;
+		OBSEncoderAutoRelease videoEncoder;
+		std::vector<OBSEncoderAutoRelease> audioEncoders;
+	};
+
+	/* Drop finished sessions; keep those still writing their encoder backlog. */
+	void PruneFinishing();
+
+	Session current;
+	/* Stopped gracefully but still draining, so a new recording can start
+	 * right away without cutting off the previous file. */
+	std::vector<Session> finishing;
 };
 
 } // namespace OBS::Vertical

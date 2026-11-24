@@ -152,10 +152,14 @@ void OBSBasic::StopRecording()
 {
 	SaveProject();
 
+	/* Stopping the main output emits "stopping" synchronously, which sets
+	 * recordingStopping; read it first so the vertical recording also stops
+	 * gracefully and keeps its encoder backlog. */
+	const bool force = recordingStopping;
 	if (outputHandler->RecordingActive()) {
-		outputHandler->StopRecording(recordingStopping);
+		outputHandler->StopRecording(force);
 	}
-	verticalRecording.Stop(recordingStopping);
+	verticalRecording.Stop(force);
 
 	OnDeactivate();
 }

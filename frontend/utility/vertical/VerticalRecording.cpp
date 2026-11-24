@@ -9,10 +9,11 @@ namespace OBS::Vertical {
 
 bool VerticalRecording::Start(obs_output_t *mainOutput, obs_canvas_t *canvas)
 {
+	PruneFinishing();
 	if (Active()) {
 		return true;
 	}
-	Reset();
+	current = Session{};
 	if (!mainOutput || !canvas || !obs_canvas_has_video(canvas)) {
 		blog(LOG_WARNING, "[vertical] Recording not started: no main recording or vertical canvas");
 		return false;
@@ -32,6 +33,10 @@ bool VerticalRecording::Start(obs_output_t *mainOutput, obs_canvas_t *canvas)
 	}
 
 	OBSDataAutoRelease encoderSettings = obs_encoder_get_settings(mainVideo);
+	OBSEncoderAutoRelease &videoEncoder = current.videoEncoder;
+	OBSOutputAutoRelease &output = current.output;
+	std::vector<OBSEncoderAutoRelease> &audioEncoders = current.audioEncoders;
+
 	videoEncoder = obs_video_encoder_create(obs_encoder_get_id(mainVideo), "vertical_recording_video",
 						encoderSettings, nullptr);
 	if (!videoEncoder) {
@@ -87,43 +92,61 @@ bool VerticalRecording::Start(obs_output_t *mainOutput, obs_canvas_t *canvas)
 
 void VerticalRecording::Stop(bool force)
 {
-	if (!output) {
+	if (!current.output) {
 		return;
 	}
 
-	if (obs_output_active(output)) {
+	if (obs_output_active(current.output)) {
 		if (force) {
-			obs_output_force_stop(output);
+			obs_output_force_stop(current.output);
 		} else {
-			obs_output_stop(output);
+			obs_output_stop(current.output);
 		}
-		blog(LOG_INFO, "[vertical] Recording stopped");
+		blog(LOG_INFO, "[vertical] Recording stopped%s", force ? " (forced)" : "");
+	}
+
+	finishing.push_back(std::move(current));
+	current = Session{};
+	PruneFinishing();
+}
+
+void VerticalRecording::PruneFinishing()
+{
+	for (auto it = finishing.begin(); it != finishing.end();) {
+		if (!it->output || !obs_output_active(it->output)) {
+			it = finishing.erase(it);
+		} else {
+			++it;
+		}
 	}
 }
 
 void VerticalRecording::SetPaused(bool paused)
 {
-	if (Active() && obs_output_paused(output) != paused) {
-		obs_output_pause(output, paused);
+	if (Active() && obs_output_paused(current.output) != paused) {
+		obs_output_pause(current.output, paused);
 	}
 }
 
 void VerticalRecording::Reset()
 {
 	Stop(true);
-	output = nullptr;
-	videoEncoder = nullptr;
-	audioEncoders.clear();
+	for (auto &session : finishing) {
+		if (session.output && obs_output_active(session.output)) {
+			obs_output_force_stop(session.output);
+		}
+	}
+	finishing.clear();
 }
 
 bool VerticalRecording::Active() const
 {
-	return output && obs_output_active(output);
+	return current.output && obs_output_active(current.output);
 }
 
 const char *VerticalRecording::LastError() const
 {
-	return output ? obs_output_get_last_error(output) : nullptr;
+	return current.output ? obs_output_get_last_error(current.output) : nullptr;
 }
 
 } // namespace OBS::Vertical
